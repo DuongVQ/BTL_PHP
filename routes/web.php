@@ -7,9 +7,7 @@ use App\Http\Controllers\AdminController;
 
 Route::get('/', [HomeController::class, 'home']);
 
-Route::get('/dashboard', [HomeController::class, 'login_home'])->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::get('/myorders', [HomeController::class, 'myorders'])->middleware(['auth', 'verified']);
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -19,6 +17,7 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
+Route::get('/dashboard', [HomeController::class, 'login_home'])->middleware(['auth', 'verified'])->name('dashboard');
 route::get('admin/dashboard', [HomeController::class, 'index'])->middleware(['auth', 'admin']);
 
 route::get('view_category', [AdminController::class, 'view_category'])->middleware(['auth', 'admin']);
@@ -44,9 +43,7 @@ route::get('delete_product/{id}', [AdminController::class, 'delete_product'])->m
 route::get('product_search', [AdminController::class, 'product_search'])->middleware(['auth', 'admin']);
 
 Route::controller(HomeController::class)->group(function () {
-
-    Route::get('stripe', 'stripe');
-
+    Route::get('stripe/{value}', 'stripe');
     Route::post('stripe', 'stripePost')->name('stripe.post');
 });
 
@@ -67,6 +64,8 @@ route::get('mycart', [HomeController::class, 'mycart'])->middleware(['auth', 've
 
 route::post('confirm_order', [HomeController::class, 'confirm_order'])->middleware(['auth', 'verified']);
 
+Route::get('/myorders', [HomeController::class, 'myorders'])->middleware(['auth', 'verified']);
+
 Route::post('/cancel_order/{id}', [HomeController::class, 'cancel_order'])->name('cancel_order');
 
 route::get('shop', [HomeController::class, 'shop'])->name('shop');
@@ -74,3 +73,7 @@ route::get('shop', [HomeController::class, 'shop'])->name('shop');
 Route::put('cart/update/{id}', [HomeController::class, 'update']);
 
 Route::delete('cart/delete/{id}', [HomeController::class, 'destroy']);
+
+Route::post('/chat-gemini', [App\Http\Controllers\GeminiController::class, 'chat']);
+
+Route::get('stripe', [App\Http\Controllers\HomeController::class, 'stripe'])->name('stripe');

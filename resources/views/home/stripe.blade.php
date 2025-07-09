@@ -1,153 +1,192 @@
 <!DOCTYPE html>
-
 <html>
 
 <head>
+    <title>Thanh Toán Stripe</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        .stripe_section {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+            max-width: 400px;
+            margin: 40px auto;
+            padding: 40px 30px;
+        }
 
-    <title>Home Decor</title>
+        #payment-form button#submit {
+            background: #635bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 12px 0;
+            width: 100%;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
+        #payment-form button#submit:hover {
+            background: #554eea;
+        }
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        #error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            min-height: 24px;
+            text-align: center;
+        }
 
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #4BB543;
+            color: #fff;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+        }
+
+        #toast.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @-webkit-keyframes fadein {
+            from {
+                top: 0;
+                opacity: 0;
+            }
+
+            to {
+                top: 30px;
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadein {
+            from {
+                top: 0;
+                opacity: 0;
+            }
+
+            to {
+                top: 30px;
+                opacity: 1;
+            }
+        }
+
+        @-webkit-keyframes fadeout {
+            from {
+                top: 30px;
+                opacity: 1;
+            }
+
+            to {
+                top: 0;
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeout {
+            from {
+                top: 30px;
+                opacity: 1;
+            }
+
+            to {
+                top: 0;
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
-
-
-
-    <div class="container">
-
-
-
-        <h1 class="text-center">Thanh Toán</h1>
-
-        <div class="row">
-            <div class="col-md-6 col-md-offset-3">
-                <div class="panel panel-default credit-card-box">
-                    <div class="panel-heading display-table">
-                        <h3 class="panel-title">Payment Details</h3>
-                    </div>
-                    <div class="panel-body">
-                        @if (Session::has('success'))
-                            <div class="alert alert-success text-center">
-                                <a href="#" class="close" data-dismiss="alert" aria-label="close">×</a>
-                                <p>{{ Session::get('success') }}</p>
-                            </div>
-                        @endif
-
-                        <form role="form" action="{{ route('stripe.post') }}" method="post"
-                            class="require-validation" data-cc-on-file="false"
-                            data-stripe-publishable-key="{{ env('STRIPE_KEY') }}" id="payment-form">
-                            @csrf
-                            <div class='form-row row'>
-                                <div class='col-xs-12 form-group required'>
-                                    <label class='control-label'>Name on Card</label> <input class='form-control'
-                                        size='4' type='text'>
-                                </div>
-                            </div>
-                            <div class='form-row row'>
-                                <div class='col-xs-12 form-group card required'>
-                                    <label class='control-label'>Card Number</label> <input autocomplete='off'
-                                        class='form-control card-number' size='20' type='text'>
-                                </div>
-                            </div>
-                            <div class='form-row row'>
-                                <div class='col-xs-12 col-md-4 form-group cvc required'>
-                                    <label class='control-label'>CVC</label> <input autocomplete='off'
-                                        class='form-control card-cvc' placeholder='ex. 311' size='4'
-                                        type='text'>
-                                </div>
-                                <div class='col-xs-12 col-md-4 form-group expiration required'>
-                                    <label class='control-label'>Expiration Month</label> <input
-                                        class='form-control card-expiry-month' placeholder='MM' size='2'
-                                        type='text'>
-                                </div>
-                                <div class='col-xs-12 col-md-4 form-group expiration required'>
-                                    <label class='control-label'>Expiration Year</label> <input
-                                        class='form-control card-expiry-year' placeholder='YYYY' size='4'
-                                        type='text'>
-                                </div>
-                            </div>
-                            <div class='form-row row'>
-                                <div class='col-md-12 error form-group hide'>
-                                    <div class='alert-danger alert'>Please correct the errors and try
-                                        again.</div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-xs-12">
-                                    <button class="btn btn-primary btn-lg btn-block" type="submit">Pay Now
-                                        ($100)</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="stripe_section" style="padding: 100px 50px;">
+        <h2>Thanh Toán {{ $value }}</h2>
+        <form id="payment-form">
+            <div id="payment-element"></div>
+            <button id="submit">Pay</button>
+            <div id="error-message"></div>
+        </form>
     </div>
-</body>
-<script type="text/javascript" src="https://js.stripe.com/v2/"></script>
-<script type="text/javascript">
-    $(function() {
-        /*------------------------------------------
-        --------------------------------------------
-        Stripe Payment Code
-        --------------------------------------------
-        --------------------------------------------*/
-        var $form = $(".require-validation");
-        $('form.require-validation').bind('submit', function(e) {
-            var $form = $(".require-validation"),
-                inputSelector = ['input[type=email]', 'input[type=password]',
-                    'input[type=text]', 'input[type=file]',
-                    'textarea'
-                ].join(', '),
-                $inputs = $form.find('.required').find(inputSelector),
-                $errorMessage = $form.find('div.error'),
-                valid = true;
-            $errorMessage.addClass('hide');
-            $('.has-error').removeClass('has-error');
-            $inputs.each(function(i, el) {
-                var $input = $(el);
-                if ($input.val() === '') {
-                    $input.parent().addClass('has-error');
-                    $errorMessage.removeClass('hide');
-                    e.preventDefault();
+    <div id="toast">Thanh toán thành công!</div>
+    <script>
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment') === 'success') {
+                var x = document.getElementById("toast");
+                if (x) {
+                    x.className = "show";
+                    x.style.visibility = "visible";
+                    setTimeout(function() {
+                        x.className = x.className.replace("show", "");
+                        x.style.visibility = "hidden";
+                    }, 3000);
                 }
-            });
-
-            if (!$form.data('cc-on-file')) {
-                e.preventDefault();
-                Stripe.setPublishableKey($form.data('stripe-publishable-key'));
-                Stripe.createToken({
-                    number: $('.card-number').val(),
-                    cvc: $('.card-cvc').val(),
-                    exp_month: $('.card-expiry-month').val(),
-                    exp_year: $('.card-expiry-year').val()
-                }, stripeResponseHandler);
-            }
-        });
-        /*------------------------------------------
-        --------------------------------------------
-        Stripe Response Handler
-        --------------------------------------------
-        --------------------------------------------*/
-        function stripeResponseHandler(status, response) {
-            if (response.error) {
-                $('.error')
-                    .removeClass('hide')
-                    .find('.alert')
-                    .text(response.error.message);
-            } else {
-                /* token contains id, last4, and card type */
-                var token = response['id'];
-                $form.find('input[type=text]').empty();
-                $form.append("<input type='hidden' name='stripeToken' value='" + token + "'/>");
-                $form.get(0).submit();
             }
         }
-    });
-</script>
+        const stripe = Stripe("{{ env('STRIPE_KEY') }}");
+
+        fetch("/stripe", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    value: {{ $value }}
+                })
+            })
+            .then(res => res.json())
+            .then(async ({
+                clientSecret
+            }) => {
+                const elements = stripe.elements({
+                    clientSecret
+                });
+                const paymentElement = elements.create("payment");
+                paymentElement.mount("#payment-element");
+
+                const form = document.getElementById("payment-form");
+                form.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const {
+                        error
+                    } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: "{{ url('/') }}?payment=success",
+                        },
+                    });
+                    if (error) {
+                        document.getElementById("error-message").textContent = error.message;
+                    }
+                });
+            });
+
+        // Hiển thị toast nếu thanh toán thành công (Stripe redirect về với ?redirect_status=succeeded)
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('redirect_status') === 'succeeded') {
+                var x = document.getElementById("toast");
+                x.className = "show";
+                setTimeout(function() {
+                    x.className = x.className.replace("show", "");
+                }, 3000);
+            }
+        }
+    </script>
+</body>
 
 </html>

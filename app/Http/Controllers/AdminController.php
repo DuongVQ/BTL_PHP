@@ -140,7 +140,7 @@ class AdminController extends Controller
     // page quản lý đơn hàng
     public function view_orders()
     {
-        $data = Order::paginate(5);
+        $data = Order::all();
         return view('admin.orders', compact('data'));
     }
 

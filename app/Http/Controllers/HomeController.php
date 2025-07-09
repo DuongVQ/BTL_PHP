@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Category;
@@ -10,8 +10,8 @@ use App\Models\User;
 use App\Models\Cart;
 use App\Models\Order;
 use Illuminate\Support\Facades\Auth;
-use Stripe;
-use Session;
+use Stripe\Stripe;
+use Stripe\PaymentIntent;
 
 class HomeController extends Controller
 {
@@ -152,7 +152,7 @@ class HomeController extends Controller
     // page đơn hàng của tôi
     public function myorders()
     {
-        $data = Order::paginate(5);
+        $data = Order::orderBy('id', 'desc')->get();
         if (Auth::id()) {
             $user = Auth::user();
             $user_id = $user->id;
@@ -177,23 +177,53 @@ class HomeController extends Controller
     }
 
     // page stripe
-    public function stripe()
+    public function stripe($value)
     {
-        return view('home.stripe');
+        return view('home.stripe', compact('value'));
     }
 
     // handle stripe
     public function stripePost(Request $request)
     {
-        Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
-        Stripe\Charge::create([
-            "amount" => 100 * 100,
-            "currency" => "usd",
-            "source" => $request->stripeToken,
-            "description" => "Test payment from itsolutionstuff.com."
+        Stripe::setApiKey(env('STRIPE_SECRET'));
+
+        $vnd = intval($request->input('value', 100000));
+        $usd = round($vnd / 25000, 2); 
+        $amount = intval($usd * 100); 
+
+        $intent = PaymentIntent::create([
+            'amount' => $amount,
+            'currency' => 'usd',
+            'automatic_payment_methods' => [
+                'enabled' => true,
+            ],
         ]);
-        Session::flash('success', 'Payment successful!');
-        return back();
+
+        $name = Auth::user()->name;
+        $phone = Auth::user()->phone;
+        $address = Auth::user()->address;
+        $userid = Auth::user()->id;
+        $cart = Cart::where('user_id', $userid)->get();
+
+        foreach ($cart as $carts) {
+            $order = new Order();
+            $order->product_id = $carts->product_id;
+            $order->name = $name;
+            $order->rec_address = $address;
+            $order->phone = $phone;
+            $order->user_id = $userid;
+            $order->payment_status = "paid";
+            $order->save();
+        }
+
+        $cart_remove = Cart::where('user_id', $userid)->get();
+        foreach($cart_remove as $remove) {
+            $data = Cart::find($remove->id);
+            $data->delete();
+        }
+        return response()->json([
+            'clientSecret' => $intent->client_secret,
+        ]);
     }
 
     // page shop - all sản phẩm

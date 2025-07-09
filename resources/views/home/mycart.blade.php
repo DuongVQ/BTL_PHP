@@ -79,7 +79,7 @@
                         <div class="">
                             <input type="submit" value="Đặt Hàng" class="pay_by_cash" />
                             <div class="w-full text-center pay_by_stripe">
-                                <a href="{{ url('stripe') }}" class="text-dark">Thanh toán online</a>
+                                <a href="{{ url('stripe', $value) }}" class="text-dark">Thanh toán online</a>
                             </div>
                         </div>
                     </form>
